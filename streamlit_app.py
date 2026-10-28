@@ -5,7 +5,7 @@ import uuid
 # 1. Page Configuration
 st.set_page_config(page_title="Custom Meet Manager", layout="wide")
 
-# Persistent storage engine - ensures links stay saved during page refreshes
+# Persistent storage engine - locks state values during page refreshes
 if "room_requests" not in st.session_state:
     st.session_state.room_requests = []  # List of dicts: {id, user, target, status, room_url}
 if "is_admin" not in st.session_state:
@@ -75,7 +75,7 @@ with tab1:
         st.info("No rooms have been requested yet.")
     else:
         for req in st.session_state.room_requests:
-            col_info, col_action = st.columns([3, 1])
+            col_info, col_action = st.columns()
             with col_info:
                 st.write(f"**Chat Room {req['id']}:** {req['user']} ↔️ {req['target']} | **Status:** `{req['status']}`")
             
@@ -87,7 +87,7 @@ with tab1:
                 else:
                     st.button("Awaiting Admin...", disabled=True, key=f"wait_{req['id']}")
 
-    # Render Video Component with Camera/Mic Bypass permissions enabled
+    # Render Video Component with Camera/Mic Permissions explicitly declared
     if st.session_state.active_room:
         st.divider()
         st.subheader("🎥 Live Meeting Connection")
@@ -96,12 +96,12 @@ with tab1:
             st.session_state.active_room = None
             st.rerun()
         else:
-            # Custom HTML wrapper bypasses browser iframe permissions blocks
+            # The allow string bypasses browser feature policy blocks on the iframe container
             iframe_html = f"""
             <iframe 
                 src="{st.session_state.active_room}" 
                 allow="camera; microphone; display-capture; autoplay; clipboard-write" 
-                style="height: 650px; width: 100%; border: 0px;"
+                style="height: 650px; width: 100%; border: 0px; border-radius: 8px;"
             ></iframe>
             """
             components.html(iframe_html, height=670)
@@ -114,7 +114,7 @@ with tab2:
         st.warning("🔒 Access Denied. Please sign in via the admin login panel on the left sidebar.")
     else:
         st.header("Control Panel: Manage Sessions")
-        st.write("Review inbound participant requests and generate secure meeting URLs.")
+        st.write("Review inbound participant requests and assign meeting locations.")
         
         if not st.session_state.room_requests:
             st.info("No incoming user requests to process.")
@@ -125,16 +125,18 @@ with tab2:
                     st.write(f"Current State: `{req['status']}`")
                     
                     if req["status"] == "Pending Admin Approval":
+                        # Let the admin paste or assign a specific room string 
+                        # or click to provision with a standard target path
+                        suggested_room_name = f"room-{req['id']}"
+                        room_input = st.text_input("Assign Whereby Room Name/URL", value=f"https://whereby.com{suggested_room_name}", key=f"input_{req['id']}")
+                        
                         col_approve, col_deny = st.columns(2)
                         
                         with col_approve:
-                            if st.button("Approve & Generate Jitsi Room", key=f"app_{req['id']}"):
-                                # Create unique random identifier string for the real Jitsi servers
-                                unique_room_id = f"StreamlitMeet-{uuid.uuid4().hex[:12]}"
-                                
+                            if st.button("Approve Request", key=f"app_{req['id']}"):
                                 st.session_state.room_requests[index]["status"] = "Approved"
-                                st.session_state.room_requests[index]["room_url"] = f"https://meet.jit.si/{unique_room_id}"
-                                st.success("Room authorized successfully!")
+                                st.session_state.room_requests[index]["room_url"] = room_input
+                                st.success("Room approved!")
                                 st.rerun()
                                 
                         with col_deny:
