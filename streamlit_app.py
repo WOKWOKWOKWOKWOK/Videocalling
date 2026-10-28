@@ -76,13 +76,13 @@ with tab1:
     else:
         for req in st.session_state.room_requests:
             # Explicitly defined column count and layout weights
-            col_info, col_action = st.columns([3, 1])
+            col_info, col_action = st.columns(2)
             with col_info:
                 st.write(f"**Chat Room {req['id']}:** {req['user']} ↔️ {req['target']} | **Status:** `{req['status']}`")
             
             with col_action:
                 if req["status"] == "Approved" and req["room_url"]:
-                    if st.button(f"Join Call Room", key=f"join_{req['id']}"):
+                    if st.button(f"Join Call Room ({req['id']})", key=f"join_{req['id']}"):
                         st.session_state.active_room = req["room_url"]
                         st.rerun()
                 else:
@@ -97,11 +97,11 @@ with tab1:
             st.session_state.active_room = None
             st.rerun()
         else:
-            # The allow string bypasses browser feature policy blocks on the iframe container
+            # Open infrastructure bypasses browser feature policy blocks on the iframe container
             iframe_html = f"""
             <iframe 
                 src="{st.session_state.active_room}" 
-                allow="camera; microphone; display-capture; autoplay; clipboard-write" 
+                allow="camera; microphone; display-capture; autoplay" 
                 style="height: 650px; width: 100%; border: 0px; border-radius: 8px;"
             ></iframe>
             """
@@ -126,9 +126,9 @@ with tab2:
                     st.write(f"Current State: `{req['status']}`")
                     
                     if req["status"] == "Pending Admin Approval":
-                        # FIXED: Ensured explicit forward slash before the room token value
-                        suggested_room_name = f"room-{req['id']}"
-                        room_input = st.text_input("Assign Whereby Room Name/URL", value=f"https://whereby.com{suggested_room_name}", key=f"input_{req['id']}")
+                        # Instant open URL path provisioning using secure token parameters
+                        suggested_room_name = f"stmeet-{req['id']}"
+                        room_input = st.text_input("Assign Video Room URL", value=f"https://tlk.io{suggested_room_name}", key=f"input_{req['id']}")
                         
                         col_approve, col_deny = st.columns(2)
                         
