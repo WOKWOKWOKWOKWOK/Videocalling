@@ -75,7 +75,8 @@ with tab1:
         st.info("No rooms have been requested yet.")
     else:
         for req in st.session_state.room_requests:
-            col_info, col_action = st.columns()
+            # FIXED: Explicitly defined column count and layout weights
+            col_info, col_action = st.columns([3, 1])
             with col_info:
                 st.write(f"**Chat Room {req['id']}:** {req['user']} ↔️ {req['target']} | **Status:** `{req['status']}`")
             
@@ -126,7 +127,6 @@ with tab2:
                     
                     if req["status"] == "Pending Admin Approval":
                         # Let the admin paste or assign a specific room string 
-                        # or click to provision with a standard target path
                         suggested_room_name = f"room-{req['id']}"
                         room_input = st.text_input("Assign Whereby Room Name/URL", value=f"https://whereby.com{suggested_room_name}", key=f"input_{req['id']}")
                         
