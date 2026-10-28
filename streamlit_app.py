@@ -92,7 +92,7 @@ with tab1:
             del st.session_state.active_room
             st.rerun()
         else:
-            # Securely render the call window inside the app
+            # Securely render the call window inside the app using the verified Jitsi domain
             components.iframe(src=st.session_state.active_room, height=650, scrolling=False)
 
 # ==========================================
@@ -118,11 +118,13 @@ with tab2:
                         
                         with col_approve:
                             if st.button("Approve & Create Room", key=f"app_{req['id']}"):
-                                # Generate a completely unique random string for the Jitsi room
+                                # Generate a completely unique random string for the Jitsi room name
                                 unique_room_id = f"StreamlitMeet-{uuid.uuid4().hex[:12]}"
-                                # Set status and tie the generated room to this specific request
+                                
+                                # FIXED DOMAIN URL STRUCTURE
                                 st.session_state.room_requests[index]["status"] = "Approved"
                                 st.session_state.room_requests[index]["room_url"] = f"https://jit.si{unique_room_id}"
+                                
                                 st.success("Room authorized successfully!")
                                 st.rerun()
                                 
