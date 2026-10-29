@@ -92,12 +92,11 @@ with tab1:
             st.session_state.active_room = None
             st.rerun()
         else:
-            # This HTML frame embeds a high-performance open-source room
-            # The 'allow' parameters let users talk directly to each other P2P
+            # Custom component injecting permissions directly to modern secure domains
             iframe_html = f"""
             <iframe 
                 src="{st.session_state.active_room}" 
-                allow="camera; microphone; display-capture; autoplay" 
+                allow="camera; microphone; speaker-selection; display-capture; autoplay; fullscreen" 
                 style="height: 650px; width: 100%; border: 0px; border-radius: 8px;"
             ></iframe>
             """
@@ -125,10 +124,10 @@ with tab2:
                         
                         with col_approve:
                             if st.button("Approve Request", key=f"app_{req['id']}"):
-                                # Generates an isolated sub-directory room using MiroTalk's open P2P architecture
+                                # FIXED: Included explicit forward slashes in the path construction
                                 unique_room_id = f"stmeet-{req['id']}-{uuid.uuid4().hex[:6]}"
                                 st.session_state.room_requests[index]["status"] = "Approved"
-                                st.session_state.room_requests[index]["room_url"] = f"https://mirotalk.com{unique_room_id}"
+                                st.session_state.room_requests[index]["room_url"] = f"https://p2p.mirotalk.com/join/{unique_room_id}"
                                 st.success("Room approved!")
                                 st.rerun()
                                 
