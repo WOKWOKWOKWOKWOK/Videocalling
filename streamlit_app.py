@@ -2,7 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import uuid
 
-# 1. Page Configuration
+# 1. Page Configuration Setup
 st.set_page_config(page_title="Block-Proof Custom Meet", layout="wide")
 
 # Persistent storage engine - locks state values during page refreshes
@@ -21,7 +21,7 @@ with st.sidebar:
         st.subheader("Admin Login")
         admin_password = st.text_input("Enter Admin Password", type="password")
         if st.button("Sign In as Admin"):
-            if admin_password == "admin123": # Default password
+            if admin_password == "admin123": # Change default password here
                 st.session_state.is_admin = True
                 st.rerun()
             else:
@@ -32,13 +32,12 @@ with st.sidebar:
             st.session_state.is_admin = False
             st.rerun()
 
-# --- MAIN INTERFACE ---
+# --- MAIN INTERFACE HEADERS ---
 st.title("📞 Native Filter-Bypass Call Hub")
 st.caption("P2P video streaming running natively on your app domain to clear network blocks.")
 
-# Create main navigation tabs
+# Create the two core horizontal navigation workspaces
 tab1, tab2 = st.tabs(["👤 User Workspace", "👑 Admin Dashboard"])
-
 # ==========================================
 # TAB 1: USER WORKSPACE
 # ==========================================
@@ -119,7 +118,6 @@ with tab1:
                 let peerConnection;
                 const roomId = "{st.session_state.active_room_id}";
 
-                // Clean object parsing configuration parameters for STUN routing
                 const rtcConfig = {{
                     iceServers: [
                         {{ urls: "stun:://google.com" }},
@@ -127,7 +125,6 @@ with tab1:
                     ]
                 }};
 
-                // Initialize a public open-mesh signaling bridge to pass tokens between tabs
                 const ws = new WebSocket(`wss://://piesocket.com{{roomId}}?api_key=VCXCEuvK8oxmZ3zAtYwSuJDYg9fAafSyJD2wIE9Q&notify_self=0`);
 
                 async function startCall() {{
@@ -160,7 +157,6 @@ with tab1:
                         }}
                     }};
 
-                    // Create an invite link if we are the first person in the tab
                     peerConnection.onnegotiationneeded = async () => {{
                         try {{
                             const offer = await peerConnection.createOffer();
@@ -193,7 +189,6 @@ with tab1:
             </script>
             """
             components.html(native_webrtc_html, height=450)
-
 # ==========================================
 # TAB 2: ADMIN DASHBOARD
 # ==========================================
@@ -210,23 +205,26 @@ with tab2:
             for index, req in enumerate(st.session_state.room_requests):
                 with st.expander(f"Request ID: {req['id']} ({req['user']} calling {req['target']})"):
                     st.write(f"Current State: `{req['status']}`")
-if req["status"] == "Pending Admin Approval":
-col_approve, col_deny = st.columns(2)
-with col_approve:
-if st.button("Approve Request", key=f"app_{req['id']}"):
-st.session_state.room_requests[index]["status"] = "Approved"
-st.session_state.room_requests[index]["room_id"] = req['id']
-st.success("Pipeline slot allocated!")
-st.rerun()
-with col_deny:
-if st.button("Deny / Delete Request", key=f"den_{req['id']}"):
-st.session_state.room_requests.pop(index)
-st.warning("Request rejected.")
-st.rerun()
-else:
-st.write(f"✅ Active Pipeline Code: {req['room_id']}")
-if st.button("Revoke & Close Room", key=f"rev_{req['id']}"):
-if st.session_state.active_room_id == req["room_id"]:
-st.session_state.active_room_id = None
-st.session_state.room_requests.pop(index)
-st.rerun()
+                    
+                    if req["status"] == "Pending Admin Approval":
+                        col_approve, col_deny = st.columns(2)
+                        
+                        with col_approve:
+                            if st.button("Approve Request", key=f"app_{req['id']}"):
+                                st.session_state.room_requests[index]["status"] = "Approved"
+                                st.session_state.room_requests[index]["room_id"] = req['id']
+                                st.success("Pipeline slot allocated!")
+                                st.rerun()
+                                
+                        with col_deny:
+                            if st.button("Deny / Delete Request", key=f"den_{req['id']}"):
+                                st.session_state.room_requests.pop(index)
+                                st.warning("Request rejected.")
+                                st.rerun()
+                    else:
+                        st.write(f"✅ **Active Pipeline Code:** `{req['room_id']}`")
+                        if st.button("Revoke & Close Room", key=f"rev_{req['id']}"):
+                            if st.session_state.active_room_id == req["room_id"]:
+                                st.session_state.active_room_id = None
+                            st.session_state.room_requests.pop(index)
+                            st.rerun()
