@@ -5,9 +5,9 @@ import uuid
 # 1. Page Configuration
 st.set_page_config(page_title="Custom P2P Call Hub", layout="wide")
 
-# Persistent storage engine
+# Persistent storage engine - keeps rooms alive across page refreshes
 if "room_requests" not in st.session_state:
-    st.session_state.room_requests = []  
+    st.session_state.room_requests = []  # List of dicts: {id, user, target, status, room_url}
 if "is_admin" not in st.session_state:
     st.session_state.is_admin = False
 if "active_room" not in st.session_state:
@@ -21,7 +21,7 @@ with st.sidebar:
         st.subheader("Admin Login")
         admin_password = st.text_input("Enter Admin Password", type="password")
         if st.button("Sign In as Admin"):
-            if admin_password == "admin123": 
+            if admin_password == "admin123": # Change password here
                 st.session_state.is_admin = True
                 st.rerun()
             else:
@@ -93,7 +93,7 @@ with tab1:
             st.rerun()
         else:
             # This HTML frame embeds a high-performance open-source room
-            # The 'allow' parameters tell the browser to let users talk directly to each other P2P
+            # The 'allow' parameters let users talk directly to each other P2P
             iframe_html = f"""
             <iframe 
                 src="{st.session_state.active_room}" 
@@ -125,10 +125,10 @@ with tab2:
                         
                         with col_approve:
                             if st.button("Approve Request", key=f"app_{req['id']}"):
-                                # We use a dynamic open-source room endpoint that connects people directly
-                                unique_room_id = f"room-{req['id']}-{uuid.uuid4().hex[:6]}"
+                                # Generates an isolated sub-directory room using MiroTalk's open P2P architecture
+                                unique_room_id = f"stmeet-{req['id']}-{uuid.uuid4().hex[:6]}"
                                 st.session_state.room_requests[index]["status"] = "Approved"
-                                st.session_state.room_requests[index]["room_url"] = f"https://jit.si{unique_room_id}"
+                                st.session_state.room_requests[index]["room_url"] = f"https://mirotalk.com{unique_room_id}"
                                 st.success("Room approved!")
                                 st.rerun()
                                 
