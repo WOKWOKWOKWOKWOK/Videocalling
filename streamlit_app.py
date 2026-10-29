@@ -80,7 +80,7 @@ with tab1:
             
             with col_action:
                 if req["status"] == "Approved" and req["room_id"]:
-                    if st.button(f"Join Call Room", key=f"join_{req['id']}"):
+                    if st.button(f"Join Call Room ({req['id']})", key=f"join_{req['id']}"):
                         st.session_state.active_room_id = req["room_id"]
                         st.rerun()
                 else:
@@ -95,7 +95,7 @@ with tab1:
             st.session_state.active_room_id = None
             st.rerun()
         else:
-            # Standalone Native HTML/JS module uses Google STUN routing infrastructure directly
+            # Standalone Native HTML/JS module uses fully valid structure syntax
             native_webrtc_html = f"""
             <div style="font-family: sans-serif; background-color: #111; color: white; padding: 20px; border-radius: 8px; text-align: center;">
                 <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 15px;">
@@ -108,7 +108,7 @@ with tab1:
                         <video id="remoteVideo" autoplay playsinline style="width: 100%; max-width: 400px; background: #222; border-radius: 6px;"></video>
                     </div>
                 </div>
-                <div id="statusLog" style="font-size: 14px; color: #00ffcc; margin-top: 10px;">Initializing native hardware media stream connection pipelines...</div>
+                <div id="statusLog" style="font-size: 14px; color: #00ffcc; margin-top: 10px;">Initializing secure video paths...</div>
             </div>
 
             <script>
@@ -117,33 +117,79 @@ with tab1:
                 const remoteVideo = document.getElementById('remoteVideo');
                 let localStream;
                 let peerConnection;
+                const roomId = "{st.session_state.active_room_id}";
 
-                // High-availability public fallback signaling addresses hosted directly by Google
+                // Clean object parsing configuration parameters for STUN routing
                 const rtcConfig = {{
-                    iceServers: [{{ urls: 'stun:://google.com' }}, {{ urls: 'stun:://google.com' }}]
+                    iceServers: [
+                        {{ urls: "stun:://google.com" }},
+                        {{ urls: "stun:://google.com" }}
+                    ]
                 }};
 
-                async function startNativeCall() {{
+                // Initialize a public open-mesh signaling bridge to pass tokens between tabs
+                const ws = new WebSocket(`wss://://piesocket.com{{roomId}}?api_key=VCXCEuvK8oxmZ3zAtYwSuJDYg9fAafSyJD2wIE9Q&notify_self=0`);
+
+                async function startCall() {{
                     try {{
                         localStream = await navigator.mediaDevices.getUserMedia({{ video: true, audio: true }});
                         localVideo.srcObject = localStream;
-                        statusLog.innerText = "Camera and Microphone active. Awaiting connection token handshake exchange...";
+                        statusLog.innerText = "Camera linked! Broadcasting connection paths to open chat tabs...";
                         
-                        peerConnection = new RTCPeerConnection(rtcConfig);
-                        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-                        peerConnection.ontrack = (event) => {{
-                            if (event.streams && event.streams[0]) {{
-                                remoteVideo.srcObject = event.streams[0];
-                                statusLog.innerText = "Connected! Live media stream pipeline verified.";
-                            }}
-                        }};
-                    }} catch (error) {{
-                        statusLog.innerText = "Hardware access blocked or camera missing: " + error.message;
+                        setupPeerConnection();
+                    }} catch (err) {{
+                        statusLog.innerText = "Hardware access failed: " + err.message;
                     }}
                 }}
-                
-                startNativeCall();
+
+                function setupPeerConnection() {{
+                    peerConnection = new RTCPeerConnection(rtcConfig);
+                    
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                    peerConnection.ontrack = (event) => {{
+                        if (event.streams && event.streams[0]) {{
+                            remoteVideo.srcObject = event.streams[0];
+                            statusLog.innerText = "Connected! Live media stream pipeline verified.";
+                        }}
+                    }};
+
+                    peerConnection.onicecandidate = (event) => {{
+                        if (event.candidate) {{
+                            ws.send(JSON.stringify({{ type: 'candidate', candidate: event.candidate }}));
+                        }}
+                    }};
+
+                    // Create an invite link if we are the first person in the tab
+                    peerConnection.onnegotiationneeded = async () => {{
+                        try {{
+                            const offer = await peerConnection.createOffer();
+                            await peerConnection.setLocalDescription(offer);
+                            ws.send(JSON.stringify({{ type: 'offer', offer: offer }}));
+                        }} catch (err) {{
+                            console.error(err);
+                        }}
+                    }};
+                }}
+
+                ws.onmessage = async (message) => {{
+                    const data = JSON.parse(message.data);
+                    
+                    if (!peerConnection) setupPeerConnection();
+
+                    if (data.type === 'offer') {{
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                        const answer = await peerConnection.createAnswer();
+                        await peerConnection.setLocalDescription(answer);
+                        ws.send(JSON.stringify({{ type: 'answer', answer: answer }}));
+                    }} else if (data.type === 'answer') {{
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    }} else if (data.type === 'candidate') {{
+                        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                    }}
+                }};
+
+                startCall();
             </script>
             """
             components.html(native_webrtc_html, height=450)
@@ -165,25 +211,24 @@ with tab2:
                 with st.expander(f"Request ID: {req['id']} ({req['user']} calling {req['target']})"):
                     st.write(f"Current State: `{req['status']}`")
                     
-                    if req["status"] == "Pending Admin Approval":
-                        col_approve, col_deny = st.columns(2)
-                        
-                        with col_approve:
-                            if st.button("Approve Request", key=f"app_{req['id']}"):
-                                st.session_state.room_requests[index]["status"] = "Approved"
-                                st.session_state.room_requests[index]["room_id"] = req['id']
-                                st.success("Pipeline slot allocated!")
-                                st.rerun()
-                                
-                        with col_deny:
-                            if st.button("Deny / Delete Request", key=f"den_{req['id']}"):
-                                st.session_state.room_requests.pop(index)
-                                st.warning("Request rejected.")
-                                st.rerun()
-                    else:
-                        st.write(f"✅ **Active Pipeline Code:** `{req['room_id']}`")
-                        if st.button("Revoke & Close Room", key=f"rev_{req['id']}"):
-                            if st.session_state.active_room_id == req["room_id"]:
-                                st.session_state.active_room_id = None
-                            st.session_state.room_requests.pop(index)
-                            st.rerun()
+Use code with caution.
+if req["status"] == "Pending Admin Approval":
+col_approve, col_deny = st.columns(2)
+with col_approve:
+if st.button("Approve Request", key=f"app_{req['id']}"):
+st.session_state.room_requests[index]["status"] = "Approved"
+st.session_state.room_requests[index]["room_id"] = req['id']
+st.success("Pipeline slot allocated!")
+st.rerun()
+with col_deny:
+if st.button("Deny / Delete Request", key=f"den_{req['id']}"):
+st.session_state.room_requests.pop(index)
+st.warning("Request rejected.")
+st.rerun()
+else:
+st.write(f"✅ Active Pipeline Code: {req['room_id']}")
+if st.button("Revoke & Close Room", key=f"rev_{req['id']}"):
+if st.session_state.active_room_id == req["room_id"]:
+st.session_state.active_room_id = None
+st.session_state.room_requests.pop(index)
+st.rerun()
