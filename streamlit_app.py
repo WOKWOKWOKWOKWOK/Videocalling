@@ -5,14 +5,14 @@ import uuid
 # 1. Clean Page Layout Setup
 st.set_page_config(page_title="Instant Multi-User Meet Hub", layout="wide")
 
-# GLOBAL CACHE CONTAINER: Creates a single list in server memory shared across ALL devices and tabs
+# GLOBAL CACHE CONTAINER: Single list in server memory shared across ALL devices and tabs
 @st.cache_resource
 def get_global_database():
-    return {}  # Maps room_name -> true/active tracking token
+    return {}  # Maps room_name -> active tracking token identifier
 
 global_rooms = get_global_database()
 
-# Track this specific user tab's active session state
+# Track this specific browser tab's session state
 if "current_room_id" not in st.session_state:
     st.session_state.current_room_id = None
 
@@ -21,14 +21,14 @@ st.caption("No sign-ups, no admin waiting queues. Enter a room token code and co
 
 st.header("Enter or Create a Meeting Room")
 
-# Direct form interface block to step into calling grid rooms instantly
+# Direct form interface block to enter calling rooms instantly
 with st.form("join_room_form", clear_on_submit=False):
-    room_name_input = st.text_input("Room Token Name ID", placeholder="e.g., math-group, project-alpha, chat123").strip().lower()
+    room_name_input = st.text_input("Room Token Name ID", placeholder="e.g., project-alpha, chat123").strip().lower()
     join_submit = st.form_submit_button("🚀 Enter Call Room Space")
     
     if join_submit:
         if room_name_input:
-            # If the room target path layout isn't created globally yet, save it instantly
+            # If the room isn't created globally yet, save its token signature instantly
             if room_name_input not in global_rooms:
                 global_rooms[room_name_input] = f"room-mesh-{room_name_input}-{uuid.uuid4().hex[:4]}"
             
@@ -44,13 +44,13 @@ st.divider()
 if st.session_state.current_room_id:
     st.subheader(f"🎥 Active Room Grid Pipeline Connection Window")
     
-    # Simple navigation toggle button to disconnect from the calling array
+    # Navigation toggle button to disconnect from the calling array
     if st.button("🔴 Close Connection & Leave Call Room"):
         st.session_state.current_room_id = None
         st.rerun()
     else:
-        # Standalone JavaScript matrix routes webcam elements completely within your browser sandbox
-        native_video_room_html = f"""
+        # 🛠️ FIXED STRUCTURE: Raw HTML wrapper with explicit browser permission access policies
+        raw_webrtc_code = f"""
         <div style="font-family:sans-serif;background:#141414;color:white;padding:20px;border-radius:12px;text-align:center;">
             <div id="vGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:15px;margin-bottom:15px;">
                 <div>
@@ -109,6 +109,17 @@ if st.session_state.current_room_id:
             init();
         </script>
         """
-        components.html(native_video_room_html, height=520)
+        
+        # 🛠️ THE CORE PERMISSION BYPASS: Wraps the html inside a custom iframe container block
+        # that explicitly grants hardware device authorization commands.
+        escaped_html = raw_webrtc_code.replace('"', '&quot;').replace('\n', ' ')
+        iframe_string = f"""
+        <iframe 
+            srcdoc="{escaped_html}" 
+            allow="camera; microphone; display-capture; autoplay" 
+            style="height: 540px; width: 100%; border: 0px;"
+        ></iframe>
+        """
+        components.html(iframe_string, height=550)
 else:
     st.info("💡 Pro-Tip: Simply enter an identical room name keyword tag on a second device or separate incognito tab window to instant link video layouts together.")
