@@ -210,8 +210,6 @@ with tab2:
             for index, req in enumerate(st.session_state.room_requests):
                 with st.expander(f"Request ID: {req['id']} ({req['user']} calling {req['target']})"):
                     st.write(f"Current State: `{req['status']}`")
-                    
-Use code with caution.
 if req["status"] == "Pending Admin Approval":
 col_approve, col_deny = st.columns(2)
 with col_approve:
