@@ -13,9 +13,9 @@ if "is_admin" not in st.session_state:
 if "active_room_id" not in st.session_state:
     st.session_state.active_room_id = None
 
-# Configure high-availability public signaling infrastructure 
+# FIXED: High-availability public signaling infrastructure format
 RTC_CONFIG = RTCConfiguration(
-    {"iceServers": [{"urls": ["stun:://google.com", "stun:://google.com"]}]}
+    ice_servers=[{"urls": ["stun:://google.com"]}]
 )
 
 # --- SIDEBAR: AUTHENTICATION ---
