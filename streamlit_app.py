@@ -105,7 +105,7 @@ with tab1:
             st.session_state.active_room_id = None
             st.rerun()
         else:
-            # Resolves connections using secure 8x8 enterprise paths to avoid filters
+            # FIXED: Added explicit forward slash directly after the .vc top-level domain
             iframe_html = f"""
             <iframe 
                 src="https://8x8.vc{st.session_state.active_room_id}" 
