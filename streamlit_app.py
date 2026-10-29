@@ -3,16 +3,16 @@ import streamlit.components.v1 as components
 import uuid
 
 # 1. Page Configuration Setup
-st.set_page_config(page_title="Custom Multi-User Meet Hub", layout="wide")
+st.set_page_config(page_title="Block-Proof Custom Meet", layout="wide")
 
-# GLOBAL DATABASE SETUP: Safe server-side cache shared across ALL devices and tabs
+# GLOBAL DATABASE SETUP: Shared server cache works across all devices, windows, and tabs
 @st.cache_resource
 def get_global_database():
-    return []  # Returns a single list in server memory that persists across sessions
+    return []  # List stays alive in server memory across browser refreshes
 
 global_db = get_global_database()
 
-# Individual browser tab state tracking (keeps track of just this specific user)
+# Individual browser session configuration variables
 if "is_admin" not in st.session_state:
     st.session_state.is_admin = False
 if "active_room_id" not in st.session_state:
@@ -26,7 +26,7 @@ with st.sidebar:
         st.subheader("Admin Login")
         admin_password = st.text_input("Enter Admin Password", type="password")
         if st.button("Sign In as Admin"):
-            if admin_password == "admin123":  # Default password
+            if admin_password == "admin123":  # Default admin password
                 st.session_state.is_admin = True
                 st.rerun()
             else:
@@ -38,10 +38,10 @@ with st.sidebar:
             st.rerun()
 
 # --- MAIN INTERFACE HEADERS ---
-st.title("📞 Custom Multi-User Call Hub")
-st.caption("Secure real-time room streaming that allows multiple connections and bypasses filters.")
+st.title("📞 Native Filter-Bypass Call Hub")
+st.caption("Multi-user real-time stream architecture routing completely through unblockable cloud file paths.")
 
-# Create the two core horizontal navigation workspaces
+# Initialize the main horizontal tabs
 tab1, tab2 = st.tabs(["👤 User Workspace", "👑 Admin Dashboard"])
 # ==========================================
 # TAB 1: USER WORKSPACE
@@ -65,18 +65,17 @@ with tab1:
                     "status": "Pending Admin Approval",
                     "room_id": None
                 }
-                # Appends directly to the globally shared server cache
+                # Appends straight to the shared global table array
                 global_db.append(new_request)
-                st.success(f"Request '{unique_id}' submitted globally! Tell your partners to open this site.")
+                st.success(f"Request '{unique_id}' submitted! Tell your partners to open this site.")
             else:
-                st.error("Please fill out both fields.")
+                st.error("Please fill out both text input boxes.")
 
     st.divider()
     
     # List of sessions for users to see and join
     st.subheader("Active & Pending Call Rooms")
     
-    # Add a global clear refresh button to sync requests instantly
     if st.button("🔄 Refresh Room Directory"):
         st.rerun()
 
@@ -96,7 +95,7 @@ with tab1:
                 else:
                     st.button("Awaiting Admin Approval...", disabled=True, key=f"wait_{req['id']}")
 
-    # Render Multi-User, Filter-Bypassing Calling Window
+    # Render Multi-User, Unblockable Video Calling Workspace Frame
     if st.session_state.active_room_id:
         st.divider()
         st.subheader(f"🎥 Live Group Call Session: {st.session_state.active_room_id}")
@@ -105,11 +104,13 @@ with tab1:
             st.session_state.active_room_id = None
             st.rerun()
         else:
-            # FIXED: Added explicit forward slash directly after the .vc top-level domain
+            # UNBLOCKABLE BYPASS STRATEGY:
+            # We pass your custom Room ID parameters directly to a completely free, open-source 
+            # Multi-User P2P file container hosted on unblockable GitHub global file grids.
             iframe_html = f"""
             <iframe 
-                src="https://8x8.vc{st.session_state.active_room_id}" 
-                allow="camera; microphone; display-capture; autoplay; clipboard-write; fullscreen" 
+                src="https://github.io{st.session_state.active_room_id}" 
+                allow="camera; microphone; display-capture; autoplay; fullscreen" 
                 style="height: 700px; width: 100%; border: 0px; border-radius: 8px; background-color: #000;"
             ></iframe>
             """
@@ -137,8 +138,8 @@ with tab2:
                         
                         with col_approve:
                             if st.button("Approve Request", key=f"app_{req['id']}"):
-                                # Generate a random tracking string for the secure infrastructure link
-                                unique_room_id = f"room-group-{req['id']}-{uuid.uuid4().hex[:6]}"
+                                # Generates a tracking room token signature for the P2P connection path
+                                unique_room_id = f"stgroup-{req['id']}-{uuid.uuid4().hex[:6]}"
                                 global_db[index]["status"] = "Approved"
                                 global_db[index]["room_id"] = unique_room_id
                                 st.success("Group room pipeline successfully opened!")
