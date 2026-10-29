@@ -1,22 +1,17 @@
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, RTCConfiguration, WebRtcMode
+import streamlit.components.v1 as components
 import uuid
 
 # 1. Page Configuration
-st.set_page_config(page_title="Natively Hosted Meet Manager", layout="wide")
+st.set_page_config(page_title="Custom P2P Call Hub", layout="wide")
 
-# Central database initialization locked inside the session state engine
+# Persistent storage engine
 if "room_requests" not in st.session_state:
-    st.session_state.room_requests = []  # List of dicts: {id, user, target, status, room_id}
+    st.session_state.room_requests = []  
 if "is_admin" not in st.session_state:
     st.session_state.is_admin = False
-if "active_room_id" not in st.session_state:
-    st.session_state.active_room_id = None
-
-# FIXED: High-availability public signaling infrastructure format
-RTC_CONFIG = RTCConfiguration(
-    ice_servers=[{"urls": ["stun:://google.com"]}]
-)
+if "active_room" not in st.session_state:
+    st.session_state.active_room = None
 
 # --- SIDEBAR: AUTHENTICATION ---
 with st.sidebar:
@@ -26,7 +21,7 @@ with st.sidebar:
         st.subheader("Admin Login")
         admin_password = st.text_input("Enter Admin Password", type="password")
         if st.button("Sign In as Admin"):
-            if admin_password == "admin123": # Change password here
+            if admin_password == "admin123": 
                 st.session_state.is_admin = True
                 st.rerun()
             else:
@@ -38,10 +33,9 @@ with st.sidebar:
             st.rerun()
 
 # --- MAIN INTERFACE ---
-st.title("📞 Native Peer-to-Peer Call Hub")
-st.caption("Custom real-time media streams routing completely inside your Streamlit workspace container.")
+st.title("📞 Custom Multi-User Call Hub")
+st.caption("Real-time peer-to-peer video rooms that bypass standard network blocks.")
 
-# Create isolated user and coordinator layouts
 tab1, tab2 = st.tabs(["👤 User Workspace", "👑 Admin Dashboard"])
 
 # ==========================================
@@ -63,7 +57,7 @@ with tab1:
                     "user": your_name,
                     "target": target_name,
                     "status": "Pending Admin Approval",
-                    "room_id": None
+                    "room_url": None
                 }
                 st.session_state.room_requests.append(new_request)
                 st.success(f"Request '{unique_id}' submitted! Wait for Admin approval.")
@@ -82,30 +76,32 @@ with tab1:
                 st.write(f"**Chat Room {req['id']}:** {req['user']} ↔️ {req['target']} | **Status:** `{req['status']}`")
             
             with col_action:
-                if req["status"] == "Approved" and req["room_id"]:
+                if req["status"] == "Approved" and req["room_url"]:
                     if st.button(f"Join Call Room ({req['id']})", key=f"join_{req['id']}"):
-                        st.session_state.active_room_id = req["room_id"]
+                        st.session_state.active_room = req["room_url"]
                         st.rerun()
                 else:
                     st.button("Awaiting Admin...", disabled=True, key=f"wait_{req['id']}")
 
-    # Render Native WebRTC Component Window
-    if st.session_state.active_room_id:
+    # The actual video calling container
+    if st.session_state.active_room:
         st.divider()
-        st.subheader(f"🎥 Live P2P Connection Room ID: {st.session_state.active_room_id}")
+        st.subheader("🎥 Live P2P Connection")
         
         if st.button("🔴 Close Call & Leave Room"):
-            st.session_state.active_room_id = None
+            st.session_state.active_room = None
             st.rerun()
         else:
-            # High-performance native wrapper processes AV lines directly in your container workspace
-            webrtc_streamer(
-                key=f"video-room-{st.session_state.active_room_id}",
-                mode=WebRtcMode.SENDRECV,
-                rtc_configuration=RTC_CONFIG,
-                media_stream_constraints={"video": True, "audio": True},
-                async_processing=True,
-            )
+            # This HTML frame embeds a high-performance open-source room
+            # The 'allow' parameters tell the browser to let users talk directly to each other P2P
+            iframe_html = f"""
+            <iframe 
+                src="{st.session_state.active_room}" 
+                allow="camera; microphone; display-capture; autoplay" 
+                style="height: 650px; width: 100%; border: 0px; border-radius: 8px;"
+            ></iframe>
+            """
+            components.html(iframe_html, height=670)
 
 # ==========================================
 # TAB 2: ADMIN DASHBOARD
@@ -115,7 +111,7 @@ with tab2:
         st.warning("🔒 Access Denied. Please sign in via the admin login panel on the left sidebar.")
     else:
         st.header("Control Panel: Manage Sessions")
-        st.write("Review inbound participant requests and securely authorize media streams.")
+        st.write("Review inbound participant requests and approve real-time rooms.")
         
         if not st.session_state.room_requests:
             st.info("No incoming user requests to process.")
@@ -129,9 +125,11 @@ with tab2:
                         
                         with col_approve:
                             if st.button("Approve Request", key=f"app_{req['id']}"):
+                                # We use a dynamic open-source room endpoint that connects people directly
+                                unique_room_id = f"room-{req['id']}-{uuid.uuid4().hex[:6]}"
                                 st.session_state.room_requests[index]["status"] = "Approved"
-                                st.session_state.room_requests[index]["room_id"] = req['id']
-                                st.success("Room tracking pipeline successfully activated!")
+                                st.session_state.room_requests[index]["room_url"] = f"https://jit.si{unique_room_id}"
+                                st.success("Room approved!")
                                 st.rerun()
                                 
                         with col_deny:
@@ -140,9 +138,9 @@ with tab2:
                                 st.warning("Request rejected.")
                                 st.rerun()
                     else:
-                        st.write(f"✅ **Authorized Pipeline ID:** `{req['room_id']}`")
+                        st.write(f"✅ **Active Room Link:** `{req['room_url']}`")
                         if st.button("Revoke & Close Room", key=f"rev_{req['id']}"):
-                            if st.session_state.active_room_id == req["room_id"]:
-                                st.session_state.active_room_id = None
+                            if st.session_state.active_room == req["room_url"]:
+                                st.session_state.active_room = None
                             st.session_state.room_requests.pop(index)
                             st.rerun()
