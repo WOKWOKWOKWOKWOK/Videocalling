@@ -5,14 +5,14 @@ import uuid
 # 1. Page Configuration Setup
 st.set_page_config(page_title="Custom Multi-User Meet Hub", layout="wide")
 
-# GLOBAL DATABASE SETUP: Shares data across ALL tabs and users instantly
-if "global_room_requests" not in st.session_state.__class__._SESSION_STATE_CONTAINER:
-    st.session_state.__class__._SESSION_STATE_CONTAINER["global_room_requests"] = []
+# GLOBAL DATABASE SETUP: Safe server-side cache shared across ALL devices and tabs
+@st.cache_resource
+def get_global_database():
+    return []  # Returns a single list in server memory that persists across sessions
 
-# Quick handle to read/write the shared database
-global_db = st.session_state.__class__._SESSION_STATE_CONTAINER["global_room_requests"]
+global_db = get_global_database()
 
-# Individual user navigation state tracking
+# Individual browser tab state tracking (keeps track of just this specific user)
 if "is_admin" not in st.session_state:
     st.session_state.is_admin = False
 if "active_room_id" not in st.session_state:
@@ -26,7 +26,7 @@ with st.sidebar:
         st.subheader("Admin Login")
         admin_password = st.text_input("Enter Admin Password", type="password")
         if st.button("Sign In as Admin"):
-            if admin_password == "admin123": # Change default password here
+            if admin_password == "admin123":  # Default password
                 st.session_state.is_admin = True
                 st.rerun()
             else:
@@ -65,7 +65,7 @@ with tab1:
                     "status": "Pending Admin Approval",
                     "room_id": None
                 }
-                # Append directly to the globally shared cloud database tracking system
+                # Appends directly to the globally shared server cache
                 global_db.append(new_request)
                 st.success(f"Request '{unique_id}' submitted globally! Tell your partners to open this site.")
             else:
@@ -75,6 +75,11 @@ with tab1:
     
     # List of sessions for users to see and join
     st.subheader("Active & Pending Call Rooms")
+    
+    # Add a global clear refresh button to sync requests instantly
+    if st.button("🔄 Refresh Room Directory"):
+        st.rerun()
+
     if not global_db:
         st.info("No rooms have been requested yet.")
     else:
@@ -100,8 +105,7 @@ with tab1:
             st.session_state.active_room_id = None
             st.rerun()
         else:
-            # Resolves the connection using secure 8x8 enterprise paths to avoid Securly filters
-            # Automatically scale layout grids to handle 2, 4, 10, or up to 50 participants seamlessly
+            # Resolves connections using secure 8x8 enterprise paths to avoid filters
             iframe_html = f"""
             <iframe 
                 src="https://8x8.vc{st.session_state.active_room_id}" 
@@ -123,7 +127,7 @@ with tab2:
         if not global_db:
             st.info("No incoming user requests to process.")
         else:
-            # Enumerate through the shared global database items
+            # Loop through the shared server database items
             for index, req in enumerate(global_db):
                 with st.expander(f"Request ID: {req['id']} ({req['user']} calling {req['target']})"):
                     st.write(f"Current State: `{req['status']}`")
@@ -132,7 +136,7 @@ with tab2:
                         col_approve, col_deny = st.columns(2)
                         
                         with col_approve:
-                            if st.button("Approve & Open Multi-User Room", key=f"app_{req['id']}"):
+                            if st.button("Approve Request", key=f"app_{req['id']}"):
                                 # Generate a random tracking string for the secure infrastructure link
                                 unique_room_id = f"room-group-{req['id']}-{uuid.uuid4().hex[:6]}"
                                 global_db[index]["status"] = "Approved"
